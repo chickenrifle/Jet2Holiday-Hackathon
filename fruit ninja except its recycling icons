@@ -1,0 +1,141 @@
+import pygame
+import random
+import sys
+import time
+from os import environ
+
+# Hide Pygame prompt
+environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
+
+# Initialize Pygame
+pygame.init()
+
+# Screen Dimensions
+WIDTH = 800
+HEIGHT = 500
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Aim Trainer")
+
+# Colors
+BLACK = (0, 0, 0)
+YELLOW = (255, 213, 0)
+WHITE = (255, 255, 255)
+
+# Fonts
+FONT = pygame.font.Font(None, 36)
+TITLE_FONT = pygame.font.Font(None, 50)
+
+
+# Function to get random position for targets
+def get_random_position(target_width, target_height):
+    """Generate random x and y coordinates within screen bounds."""
+    randx = random.randint(0, WIDTH - target_width)
+    randy = random.randint(0, HEIGHT - target_height)
+    return randx, randy
+
+
+# Aim Trainer Game Page
+def game_page(duration, target_image):
+    """Main game logic."""
+    target_image = pygame.transform.scale(target_image, (80, 81))  # Resize target
+    target_width, target_height = target_image.get_size()
+
+    start_time = time.time()
+    end_time = start_time + duration
+
+    targets = []
+    hits = 0
+    misses = 0
+
+    # Main Game Loop
+    while time.time() < end_time:
+        SCREEN.fill(BLACK)
+
+        # Timer Display
+        time_left = max(0, end_time - time.time())
+        timer_text = FONT.render(f"Time Remaining: {time_left:.1f}", True, YELLOW)
+        SCREEN.blit(timer_text, (10, 10))
+
+        # Draw Targets
+        for target_rect in targets:
+            SCREEN.blit(target_image, target_rect.topleft)
+
+        # Spawn New Targets
+        while len(targets) < 3:
+            randx, randy = get_random_position(target_width, target_height)
+            new_rect = pygame.Rect(randx, randy, target_width, target_height)
+            targets.append(new_rect)
+
+        # Event Handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                for target_rect in targets[:]:
+                    if target_rect.collidepoint(mouse_pos):  # Hit detection
+                        targets.remove(target_rect)
+                        hits += 1
+                        break
+                else:
+                    misses += 1
+
+        pygame.display.flip()
+
+    # Return Results
+    return hits, misses
+
+
+# Score Page
+def score_page(hits, misses):
+    """Display final score."""
+    SCREEN.fill(BLACK)
+    accuracy = (hits / (hits + misses)) * 100 if hits + misses > 0 else 0
+    final_score = f"Accuracy: {accuracy:.2f}%"
+
+    while True:
+        SCREEN.fill(BLACK)
+
+        # Score Text
+        score_text = TITLE_FONT.render(final_score, True, YELLOW)
+        SCREEN.blit(score_text, (WIDTH / 2 - score_text.get_width() / 2, HEIGHT / 2 - 25))
+
+        # Exit Instruction
+        exit_text = FONT.render("Click anywhere to exit.", True, WHITE)
+        SCREEN.blit(exit_text, (WIDTH / 2 - exit_text.get_width() / 2, HEIGHT / 2 + 50))
+
+        # Event Handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                return
+
+        pygame.display.flip()
+
+
+# Main Function
+def start_game():
+    """Main function to run the Aim Trainer."""
+    # Load Target Image
+    try:
+        target_image = pygame.image.load("trash.png")
+    except pygame.error as e:
+        print("Error loading target image:", e)
+        pygame.quit()
+        sys.exit()
+
+    # Fixed Timer (30 seconds for testing)
+    duration = 30
+
+    # Game Page
+    hits, misses = game_page(duration, target_image)
+
+    # Score Page
+    score_page(hits, misses)
+
+
+if __name__ == "__main__":
+    start_game()
